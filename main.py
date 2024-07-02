@@ -94,13 +94,15 @@ from langchain.chains import RetrievalQA
 
 
 def generation2(VectorStore, query):
-    retriever = VectorStore.as_retriever()
+    retriever = VectorStore.as_retriever(search_type="similarity", search_kwargs={"k": 5})
     model = OpenAI(model_name="qwen1.5-72b-chat", openai_api_key=API_KEY, openai_api_base=BASE_URL)
     qa = RetrievalQA.from_chain_type(llm=model, chain_type="refine", retriever=retriever, return_source_documents=False,
                                      verbose=True)
 
     prompt = '''
-Extract the following key values from the provided PDF content and format them strictly as a JSON object. Ensure the JSON is valid, properly formatted, and includes all keys even if their values are empty. If certain values are not available, leave them as empty strings.
+Extract the following key values from the provided PDF content and format them strictly as a JSON object. 
+Ensure the JSON is valid, properly formatted, and includes all keys even if their values are empty. 
+If certain values are not available, leave them as empty strings.
 
 {
     "name": "NAME_OF_THE_DOC",
