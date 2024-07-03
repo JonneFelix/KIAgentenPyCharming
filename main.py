@@ -94,7 +94,7 @@ from langchain.chains import RetrievalQA
 
 
 def generation2(VectorStore, query):
-    retriever = VectorStore.as_retriever(search_type="similarity", search_kwargs={"k": 5})
+    retriever = VectorStore.as_retriever(search_type="similarity", search_kwargs={"k": chunk_amount})
     model = OpenAI(model_name="qwen1.5-72b-chat", openai_api_key=API_KEY, openai_api_base=BASE_URL)
     qa = RetrievalQA.from_chain_type(llm=model, chain_type="refine", retriever=retriever, return_source_documents=False,
                                      verbose=True)
@@ -169,7 +169,9 @@ def chat_api():
     user_message = request.json.get("message")
     model = request.json.get("model", "qwen1.5-72b-chat")
     vector_store = load_vector_store('vector_store.pkl')
-    retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
+    chunk_amount = determine_chunk_amount(chunk_size)
+    print(chunk_amount)
+    retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": chunk_amount})
     retrieved_docs = retriever.invoke(user_message)
 
     headers = {
@@ -230,7 +232,9 @@ def upload_file():
             return jsonify({"error": "No file part in the request"}), 400
         file = request.files['file']
         if file and allowed_file(file.filename):
+            global chunk_size, chunk_amount
             chunk_size = int(request.form.get('chunk_size'))
+            chunk_amount = determine_chunk_amount(chunk_size)
             logger.info(f"Chunk size: {chunk_size}")
             delete_files_in_folder(app.config['UPLOAD_FOLDER'])
             delete_files_in_folder(app.config['OUTPUT_FOLDER'])
@@ -357,6 +361,17 @@ def delete_files_in_folder(folder_path):
                 print(f"Skipping non-file item: {file_path}")
     except Exception as e:
         print(f"Error: {e}")
+
+def determine_chunk_amount(size):
+    if size == 200:
+        amount = 5
+    elif size == 300:
+        amount = 4
+    elif size == 400:
+        amount = 3
+    elif size == 500:
+        amount = 2
+    return amount
 
 if __name__ == "__main__":
     from waitress import serve
