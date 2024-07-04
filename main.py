@@ -11,8 +11,8 @@ from dotenv import load_dotenv
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from langchain_community.llms import OpenAI
+from langchain.chains import RetrievalQA
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -32,15 +32,18 @@ OUTPUT_FOLDER = 'output'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
 
+# Check if the upload folder exists, if not, create it
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
-
+# Check if the output folder exists, if not, create it
 if not os.path.exists(OUTPUT_FOLDER):
     os.makedirs(OUTPUT_FOLDER)
 
+# Function to check if the uploaded file is of an allowed type
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# Function to validate a PDF file
 def validate_pdf(file_path):
     try:
         with open(file_path, 'rb') as pdf_file:
@@ -52,6 +55,7 @@ def validate_pdf(file_path):
         return False
     return False
 
+# Function to extract text from a PDF file
 def pdf_to_text(pdf_path):
     text = ""
     with open(pdf_path, 'rb') as pdf_file:
@@ -65,32 +69,11 @@ def pdf_to_text(pdf_path):
                 logger.error(f"Error extracting text from page {page_num}: {e}")
     return text
 
+# Function to clean text by removing specific unicode patterns and extra whitespace
 def clean_text(text):
     clean_text = re.sub(r'\\u\w{4}', ' ', text)
     clean_text = re.sub(r'\s+', ' ', clean_text)
     return clean_text.strip()
-
-def requests_retry_session(
-    retries=5,
-    backoff_factor=1,
-    status_forcelist=(500, 502, 504),
-    session=None,
-):
-    session = session or requests.Session()
-    retry = Retry(
-        total=retries,
-        read=retries,
-        connect=retries,
-        backoff_factor=backoff_factor,
-        status_forcelist=status_forcelist,
-    )
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount('http://', adapter)
-    session.mount('https://', adapter)
-    return session
-
-from langchain_community.llms import OpenAI
-from langchain.chains import RetrievalQA
 
 
 def generation2(VectorStore, query):
@@ -121,19 +104,19 @@ If certain values are not available, leave them as empty strings.
 PDF Content:
 '''
 
-    # Abrufen der relevanten Chunks
+    # calling relevant Chunks
     relevant_chunks = retriever.get_relevant_documents(query)
     logger.info(f"Number of relevant chunks retrieved: {len(relevant_chunks)}")
 
-    # Kombinieren der Texte der relevanten Chunks
+    # Combining the Text of all relevant Chunks
     pdf_content = "\n".join(chunk.page_content for chunk in relevant_chunks)
 
-    # Kombiniere den Prompt und den PDF-Inhalt
+    # Combining the Prompt with the PDF Content
     full_prompt = prompt + pdf_content
 
     result = qa.run({"query": full_prompt})
 
-    # Extrahiere den JSON-Teil der Antwort
+    # Extracting the JSON from the result
     json_start = result.find('{')
     json_end = result.rfind('}') + 1
     json_string = result[json_start:json_end]
@@ -147,10 +130,12 @@ PDF Content:
     return json_data
 
 
+# Route to render the home page
 @app.route("/")
 def home_route():
     return render_template("home.html")
 
+# Route to handle the chat page
 @app.route("/chat")
 def chat_route():
     pdf_filename = request.args.get('pdf', None)
@@ -160,17 +145,19 @@ def chat_route():
         pdf_text = pdf_to_text(pdf_path)
     return render_template("chat.html", pdf_filename=pdf_filename, pdf_text=pdf_text)
 
+# Route to serve uploaded files from the UPLOAD_FOLDER directory
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+# Handel Chat messages and responses
 @app.route("/api/chat", methods=["POST"])
 def chat_api():
+    #get the message
     user_message = request.json.get("message")
     model = request.json.get("model", "qwen1.5-72b-chat")
+    # get the chunks most similar to the user message
     vector_store = load_vector_store('vector_store.pkl')
-    chunk_amount = determine_chunk_amount(chunk_size)
-    print(chunk_amount)
     retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": chunk_amount})
     retrieved_docs = retriever.invoke(user_message)
 
@@ -178,27 +165,35 @@ def chat_api():
         'Authorization': f'Bearer {API_KEY}',
         'Content-Type': 'application/json'
     }
+    #check for old messages. If message 3 or more:
     if os.path.exists(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt2.json')):
+        #get old messages and respones
         prompt_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt1.json')).read()
         prompt_text2 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt2.json')).read()
         response_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'response1.json')).read()
         response_text2 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'response2.json')).read()
+        #create prompt with old messages and responses
         prompt = (
-            f"Das folgende PDF wurde hochgeladen:\n\n{retrieved_docs}\n\n"
-            f"Unsere bishereige Konversation:\n\nFrage 1:{prompt_text2} Antwort 1: {response_text2}\n"
-            f"Frage 2:{prompt_text1} Antwort 2: {response_text1}\n"
-            f"beantworte mit all den bisher gegebenden Informationen diese Frage:{user_message}"
+            f"The folowing PDF was uploaded:\n\n{retrieved_docs}\n\n"
+            f"Our conversation until this point:\n\nQuestion 1:{prompt_text2} Answer 1: {response_text2}\n"
+            f"Question 2:{prompt_text1} Answer 2: {response_text1}\n"
+            f"with all given Information answer this Question:{user_message}"
         )
+    #check for old messages. If message 2:
     elif os.path.exists(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt1.json')):
+        #get old messages and respones
         prompt_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt1.json')).read()
         response_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'response1.json')).read()
+        #create prompt with old messages and responses
         prompt = (
-            f"Das folgende PDF wurde hochgeladen:\n\n{retrieved_docs}\n\n"
-            f"Unsere bishereige Konversation:\n\nFrage 1:{prompt_text1} Antwort 1: {response_text1}\n"
-            f"beantworte mit all den bisher gegebenden Informationen diese Frage:{user_message}"
+            f"The folowing PDF was uploaded:\n\n{retrieved_docs}\n\n"
+            f"Our conversation until this point:\n\nQuestion 1:{prompt_text1} Answer 1: {response_text1}\n"
+            f"with all given Information answer this Question:{user_message}"
         )
+    #first message
     else:
-        prompt = f"Das folgende PDF wurde hochgeladen:\n\n{retrieved_docs}\n\nFrage: {user_message}"
+        #prompt without old messages
+        prompt = f"The folowing PDF was uploaded:\n\n{retrieved_docs}\n\nwith the given Information answer this Question:{user_message}"
 
     print(prompt)
     save_prompt([user_message])
@@ -212,19 +207,23 @@ def chat_api():
         "temperature": 0
     }
 
+    #get response from API
     response = requests.post(f"{BASE_URL}/chat/completions", headers=headers, json=data)
     response_data = response.json()
 
     save_response(response_data)
 
+    #return response
     logger.info(f"API response: {response_data}")
     return jsonify(response_data)
 
+#save the text chunks
 def save_chunks(chunks, filename):
     chunk_file = os.path.join(app.config['OUTPUT_FOLDER'], f"{filename}_chunks.pkl")
     with open(chunk_file, 'wb') as f:
         pickle.dump(chunks, f)
 
+#handeling an pdf upload
 @app.route("/upload", methods=["POST"])
 def upload_file():
     try:
@@ -232,10 +231,12 @@ def upload_file():
             return jsonify({"error": "No file part in the request"}), 400
         file = request.files['file']
         if file and allowed_file(file.filename):
+            #get the chunksize and get the chunkamount arcorrding to the chunksize to avoid to long prompts
             global chunk_size, chunk_amount
             chunk_size = int(request.form.get('chunk_size'))
             chunk_amount = determine_chunk_amount(chunk_size)
             logger.info(f"Chunk size: {chunk_size}")
+            #delete old files to make checks for first question possible
             delete_files_in_folder(app.config['UPLOAD_FOLDER'])
             delete_files_in_folder(app.config['OUTPUT_FOLDER'])
             filename = secure_filename(file.filename)
@@ -251,13 +252,15 @@ def upload_file():
             if not validate_pdf(filepath):
                 logger.error("Invalid or corrupted PDF file")
                 return jsonify({"error": "Invalid or corrupted PDF file"}), 400
-
+            #get text on pdf
             text = pdf_to_text(filepath)
+            #store pdf text in chunks off selected chunksize
             chunks = chunk_processing(text, chunk_size)
             save_chunks(chunks, filename)
             vector_store = embeddings(chunks)
             save_vector_store(vector_store, 'vector_store.pkl')
 
+            #return pdf text
             return jsonify({"filename": filename, "text": text})
         return jsonify({"error": "Invalid file format"}), 400
     except Exception as e:
@@ -290,7 +293,7 @@ def download_json():
 
 
 
-
+# Function to split text into chunks, called with selected chunksize
 def chunk_processing(text,chunk_s):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_s,
@@ -300,12 +303,14 @@ def chunk_processing(text,chunk_s):
     chunks = text_splitter.split_text(text=text)
     return chunks
 
+#embeddings for the chunks
 def embeddings(chunks):
     embeddings_model_name = "sentence-transformers/all-MiniLM-L6-v2"
     embeddings = HuggingFaceEmbeddings(model_name=embeddings_model_name)
     vector_store = FAISS.from_texts(chunks, embedding=embeddings)
     return vector_store
 
+#save and load the vectorstore
 def save_vector_store(vector_store, filename):
     directory = 'vectorStore'
     if not os.path.exists(directory):
@@ -320,6 +325,7 @@ def load_vector_store(filename):
     with open(filepath, 'rb') as f:
         return pickle.load(f)
 
+#save and load the prompt and response
 def save_response(response_data):
     output_folder = app.config['OUTPUT_FOLDER']
     response1_path = os.path.join(output_folder, 'response1.json')
@@ -350,6 +356,7 @@ def save_prompt(prompt_data):
     with open(prompt1_path, 'w') as f:
         json.dump(prompt_data_list, f)
 
+#delete files in folder
 def delete_files_in_folder(folder_path):
     try:
         for filename in os.listdir(folder_path):
@@ -362,6 +369,7 @@ def delete_files_in_folder(folder_path):
     except Exception as e:
         print(f"Error: {e}")
 
+#determine the amount of chunks acording to the chunksize
 def determine_chunk_amount(size):
     if size == 200:
         amount = 5
