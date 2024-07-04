@@ -1,42 +1,31 @@
-var chunk_amount =0;
-function setGlobalVariable(size) {
-    chunk_size = size;
-    console.log(chunk_size + "hihih");
- if (chunk_size == 200) {
-    chunk_amount = 5;
-} else if (chunk_size == 300) {
-    chunk_amount = 4;
-} else if (chunk_size == 400) {
-    chunk_amount = 3;
-} else if (chunk_size == 500) {
-    chunk_amount = 2;
-}
-
-}
-
+// Wait for the entire DOM to load before running the script
 document.addEventListener('DOMContentLoaded', () => {
 
+     // Get references to DOM elements
     const pdfUpload = document.getElementById('pdf-upload');
     const proceedButton = document.getElementById('proceed-button');
 
+    // Initially disable the proceed button
     proceedButton.disabled = true;
     proceedButton.classList.add('disabled');
 
+     // Add an event listener to the PDF upload input
     pdfUpload.addEventListener('change', (event) => {
+        // Get the selected file and check if it is a PDF
         const file = event.target.files[0];
         if (file && file.type === 'application/pdf') {
             const formData = new FormData();
 
+            // Get the selected chunk size from the dropdown menu
             var selectElement = document.getElementById('chunk-size');
-            var selectedValue = selectElement.value;
-            console.log(selectedValue + "hohoho");
-            setGlobalVariable(selectedValue);
-            console.log(chunk_size + " " + chunk_amount);
+            var chunk_size = selectElement.value;
+            console.log(chunk_size);
 
+            // Append the file and chunk size information to the FormData object
             formData.append('file', file);
             formData.append('chunk_size', chunk_size);
-            formData.append('chunk_amount', chunk_amount);
 
+             // Send the FormData object to the server via a POST request
             fetch('/upload', {
                 method: 'POST',
                 body: formData
@@ -69,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Add an event listener to the proceed button for the click event
     proceedButton.addEventListener('click', () => {
         const filename = proceedButton.dataset.filename;
         if (filename) {
