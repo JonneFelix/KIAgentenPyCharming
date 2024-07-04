@@ -167,33 +167,33 @@ def chat_api():
     }
     #check for old messages. If message 3 or more:
     if os.path.exists(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt2.json')):
-        #get old messages and respones
+        #get old messages and responses
         prompt_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt1.json')).read()
         prompt_text2 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt2.json')).read()
         response_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'response1.json')).read()
         response_text2 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'response2.json')).read()
         #create prompt with old messages and responses
         prompt = (
-            f"The folowing PDF was uploaded:\n\n{retrieved_docs}\n\n"
+            f"The following PDF was uploaded:\n\n{retrieved_docs}\n\n"
             f"Our conversation until this point:\n\nQuestion 1:{prompt_text2} Answer 1: {response_text2}\n"
             f"Question 2:{prompt_text1} Answer 2: {response_text1}\n"
             f"with all given Information answer this Question:{user_message}"
         )
     #check for old messages. If message 2:
     elif os.path.exists(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt1.json')):
-        #get old messages and respones
+        #get old messages and responses
         prompt_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'prompt1.json')).read()
         response_text1 = open(os.path.join(app.config['OUTPUT_FOLDER'], 'response1.json')).read()
         #create prompt with old messages and responses
         prompt = (
-            f"The folowing PDF was uploaded:\n\n{retrieved_docs}\n\n"
+            f"The following PDF was uploaded:\n\n{retrieved_docs}\n\n"
             f"Our conversation until this point:\n\nQuestion 1:{prompt_text1} Answer 1: {response_text1}\n"
             f"with all given Information answer this Question:{user_message}"
         )
     #first message
     else:
         #prompt without old messages
-        prompt = f"The folowing PDF was uploaded:\n\n{retrieved_docs}\n\nwith the given Information answer this Question:{user_message}"
+        prompt = f"The following PDF was uploaded:\n\n{retrieved_docs}\n\nwith the given Information answer this Question:{user_message}"
 
     print(prompt)
     save_prompt([user_message])
@@ -201,7 +201,7 @@ def chat_api():
     data = {
         "model": model,
         "messages": [
-            {"role": "system", "content": "Du bist ein hilfreicher Assistent."},
+            {"role": "system", "content": "You are a helpful Assistant"},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0
@@ -231,7 +231,7 @@ def upload_file():
             return jsonify({"error": "No file part in the request"}), 400
         file = request.files['file']
         if file and allowed_file(file.filename):
-            #get the chunksize and get the chunkamount arcorrding to the chunksize to avoid to long prompts
+            #get the chunk size and get the chunk amount according to the chunk size to avoid to long prompts
             global chunk_size, chunk_amount
             chunk_size = int(request.form.get('chunk_size'))
             chunk_amount = determine_chunk_amount(chunk_size)
@@ -254,7 +254,7 @@ def upload_file():
                 return jsonify({"error": "Invalid or corrupted PDF file"}), 400
             #get text on pdf
             text = pdf_to_text(filepath)
-            #store pdf text in chunks off selected chunksize
+            #store pdf text in chunks off selected chunk size
             chunks = chunk_processing(text, chunk_size)
             save_chunks(chunks, filename)
             vector_store = embeddings(chunks)
@@ -293,7 +293,7 @@ def download_json():
 
 
 
-# Function to split text into chunks, called with selected chunksize
+# Function to split text into chunks, called with selected chunk size
 def chunk_processing(text,chunk_s):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_s,
@@ -369,7 +369,7 @@ def delete_files_in_folder(folder_path):
     except Exception as e:
         print(f"Error: {e}")
 
-#determine the amount of chunks acording to the chunksize
+#determine the amount of chunks according to the chunk size
 def determine_chunk_amount(size):
     if size == 200:
         amount = 5
