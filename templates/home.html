@@ -11,23 +11,24 @@
     {% include 'partials/_header.html' %}
     <div class="container mt-5">
         <div id="landing-page" class="text-center">
-            <h1 class="display-4">Willkommen bei der PDF-Chat-Anwendung</h1>
-            <p class="lead">Bitte lade ein PDF hoch, um zu beginnen, oder fahre mit der Chat-Oberfläche fort.</p>
+            <h1 class="display-4">Welcome to the PDF Chatbot</h1>
+            <p class="lead">Please upload a PDF, to begin, or select a Chunk size first</p>
             <input type="file" id="pdf-upload" class="form-control-file mb-4" aria-label="PDF hochladen" accept="application/pdf">
-            <br>
-            <button id="proceed-button" class="btn btn-primary disabled" disabled>Zum Chat</button>
+            <div class="d-flex flex-column align-items-center">
+                <button id="proceed-button" class="btn btn-primary mb-2 disabled" disabled>To the Chat</button>
+                <p>Select Chunk size:</p>
+                <div class="form-group w-25">
+                    <label for="chunk-size" class="sr-only">Chunk Size</label>
+                    <select class="form-control" id="chunk-size">
+                        <option value="200">200</option>
+                        <option value="300">300</option>
+                        <option value="400">400</option>
+                        <option value="500">500</option>
+                    </select>
+                </div>
+            </div>
         </div>
     </div>
-    {% include 'partials/_footer.html' %}
     <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
-<div class="form-group">
-    <label for="chunk-size"></label>
-    <select class="form-control" id="chunk-size">
-        <option value="200">200</option>
-        <option value="300">300</option>
-        <option value="400">400</option>
-        <option value="500">500</option>
-    </select>
-</div>
 </body>
 </html>
