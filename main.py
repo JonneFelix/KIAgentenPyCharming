@@ -77,11 +77,15 @@ def clean_text(text):
 
 
 def generation2(VectorStore, query):
+    # Initialize retriever from the VectorStore, searching for similarity, get chunk_amount based on chunk_size
     retriever = VectorStore.as_retriever(search_type="similarity", search_kwargs={"k": chunk_amount})
+    # Initialize the OpenAi language model, qwen works the best
     model = OpenAI(model_name="qwen1.5-72b-chat", openai_api_key=API_KEY, openai_api_base=BASE_URL)
+    # Initialize RetrievalQA chain, the model and retriever are included
     qa = RetrievalQA.from_chain_type(llm=model, chain_type="refine", retriever=retriever, return_source_documents=False,
                                      verbose=True)
 
+    # This is the prompt which is sent to the llm, advise the llm to search for the key values
     prompt = '''
 Extract the following key values from the provided PDF content and format them strictly as a JSON object. 
 Ensure the JSON is valid, properly formatted, and includes all keys even if their values are empty. 
@@ -113,14 +117,14 @@ PDF Content:
 
     # Combining the Prompt with the PDF Content
     full_prompt = prompt + pdf_content
-
+    # QA chain runs with the combined prompt
     result = qa.run({"query": full_prompt})
 
     # Extracting the JSON from the result
     json_start = result.find('{')
     json_end = result.rfind('}') + 1
     json_string = result[json_start:json_end]
-
+    # parse the json string, so we have usable json Format
     try:
         json_data = json.loads(json_string)
     except json.JSONDecodeError as e:
@@ -269,26 +273,32 @@ def upload_file():
 
 @app.route("/download-json", methods=["GET"])
 def download_json():
+    # get pdf parameter from query string
     pdf_filename = request.args.get('pdf', None)
+    # check if pdf is provided, else error
     if not pdf_filename:
         return jsonify({"error": "No PDF file specified"}), 400
-
+    # search/build the path of the pdf file
     pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], pdf_filename)
+    # check if specified pdf file exists, else error
     if not os.path.exists(pdf_path):
         return jsonify({"error": "PDF file not found"}), 404
-
-    vector_store = load_vector_store('vector_store.pkl')  # Laden des VectorStore
-    query = "Extract key values from the PDF"  # Beispiel-Abfrage, anpassen falls notwendig
-    result = generation2(vector_store, query)  # Korrekte Aufruf von generation2
-
+    # load vector store from pickle file
+    vector_store = load_vector_store('vector_store.pkl')
+    #definde query to extract key values from given pdf
+    query = "Extract key values from the PDF"
+    # call generation2 function with vector store and the query
+    result = generation2(vector_store, query)
+    # check for errors in result, if error return error warning
     if "error" in result:
         logger.error(f"Failed to extract key values: {result['error']}")
         return jsonify(result), 500
-
+    #define path to save extracted key values as JSON file
     output_file = os.path.join(app.config['OUTPUT_FOLDER'], 'extracted_key_values.json')
+    # write result into the json file
     with open(output_file, 'w') as f:
         json.dump(result, f, indent=4)
-
+    # send JSON file -> download starts automatically
     return send_file(output_file, as_attachment=True)
 
 
