@@ -22,6 +22,8 @@
 16. [API Details](#api-details)
 17. [Screenshots/Demo](#screenshotsdemo)
 18. [Acknowledgements](#acknowledgements)
+19. [Reflection](#reflection)
+20. [Feedback](#feedback)
 
 ## Introduction/Overview
 
@@ -175,15 +177,29 @@ The application provides the following API endpoints:
 
 Here an exemplary illustration of the Landing Page:
 <img width="775" alt="Screenshot 2024-07-04 at 13 58 24" src="https://github.com/JonneFelix/KIAgentenPyCharming/assets/165815670/617e9854-22d5-4abe-a8d3-9ea3d51fcad3">
+select 
 
+On the landing page you can select a chunk size. The chunk size will determine in what size chunks the text of the pdf will be cut into. This can change the performance of the Website. If no chunk size is selected the default value is 200. After selecting a chunk size u can upload a pdf. The chat button turns blue when the upload is finished. 
 
 Here an exemplary illustration of the Chatbot Page:
 ![Screenshot 2024-07-04 at 15 48 20](https://github.com/JonneFelix/KIAgentenPyCharming/assets/165815670/0025dea0-9be5-4d9e-ae7c-4894a1be06b6)
+
+On the chatbot page you have a display of the PDF. In the top right corner, you can select one of the four LLMs. In the chat window you can ask questions about the PDF. With the “download JSON” button you can extract key values from the pdf and download them in JSON format. 
 
 ## Acknowledgements
 
 - Flask: A lightweight WSGI web application framework.
 - Bootstrap: For responsive UI components.
 - OpenAI: For the Chat-GPT assistance.
+
+## Reflection
+Overall, we are happy with our project and how much we have learned during it. Our Groub worked well together because everyone was motivated to help and learn new skills when working with unfamiliar tasks. The main reason for this is because the tasks given and the environment, we worked in were Fun. 
+The biggest issues we had were with Git. We had multiple failed merge attempts and didn’t know how to properly spilt our work into branches so that multiple people could work on the same file at the same time. Another issue we faced was that sometimes the LLMs we tried to contact stopped working and it took us a while to realize that the cause for the errors were not in our code. Then we wasted a lot of time looking for the error, onetime even creating new errors in the process, when the easy solution was just to use a different LLM. 
+
+## Feedback 
+Overall, we are very happy with how much we have learned during this project and how fun it was. This was mainly due to the realistic task and accompanying input and feedback. Things that could be improved next year would be a clearer direction from the start of what the final goal should be. We hope the experience from this year can help to judge the prior knowledge and skill level of the students to achieve this. 
+Also maybe showing what error Messages you get when the LLMs stop working in class might save a future group a significant amount of time. 
+
+
 
 If you have any further questions, do not hesitate to contact us!
