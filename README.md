@@ -57,13 +57,11 @@ One of the key features of this application is the ability to download a JSON fi
 - Modern web browsers (Chrome, Firefox, Edge)
 
 ## LLM Models
-- mixtral-8x7b-instruct
+
 - qwen1.5-72b-chat
 - intel-neural-chat-7b
+- mixtral-8x7b-instruct
 - meta-llama-3-70b-instruct
-
-Default:  mixtral-8x7b-instruct.Best JSON files.
-
 
 ## Packages Installation
 

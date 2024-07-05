@@ -79,8 +79,8 @@ def clean_text(text):
 def generation2(VectorStore, query):
     # Initialize retriever from the VectorStore, searching for similarity, get chunk_amount based on chunk_size
     retriever = VectorStore.as_retriever(search_type="similarity", search_kwargs={"k": chunk_amount})
-    # Initialize the OpenAi language model, mixtral gives most consistent jsons
-    model = OpenAI(model_name="mixtral-8x7b-instruct", openai_api_key=API_KEY, openai_api_base=BASE_URL)
+    # Initialize the OpenAi language model, qwen works the best
+    model = OpenAI(model_name="qwen1.5-72b-chat", openai_api_key=API_KEY, openai_api_base=BASE_URL)
     # Initialize RetrievalQA chain, the model and retriever are included
     qa = RetrievalQA.from_chain_type(llm=model, chain_type="refine", retriever=retriever, return_source_documents=False,
                                      verbose=True)
